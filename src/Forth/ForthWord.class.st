@@ -36,14 +36,6 @@ ForthWord >> do: aBlock [
 	do := aBlock
 ]
 
-{ #category : 'evaluating' }
-ForthWord >> executeFor: runtime [
-
-	immediate ifTrue: [ ^ do value ].
-	runtime isCompiling ifFalse: [ ^ do value ].
-	runtime addToCompilation: self
-]
-
 { #category : 'defining' }
 ForthWord >> finish: aWord forRuntime: runtime [
 
