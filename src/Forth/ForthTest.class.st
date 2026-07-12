@@ -7,6 +7,14 @@ Class {
 }
 
 { #category : 'tests' }
+ForthTest >> testErrors [
+
+	self should: [ 'fooBarBaz' asForth ] raise: Error.
+	self should: [ ': foo [ foo ] ;' asForth ] raise: Error. "failing for the wrong reason until `[` and `]` are defined "
+	self should: [ '[CHAR] a' asForth ] raise: Error " remove once we define `[CHAR]` "
+]
+
+{ #category : 'tests' }
 ForthTest >> testSimple [
 
 	| f |

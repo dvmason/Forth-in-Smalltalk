@@ -18,18 +18,124 @@ Class {
 	#package : 'Forth'
 }
 
-{ #category : 'initialization' }
-Forth >> compiling: aString [
+{ #category : 'compiling' }
+Forth >> addToCompilation: aForthWord [ 
 
-	compiling ifNil: [ ^ nil ].
-	immediates at: aString ifPresent: [ :word | ^ word ].
-	words at: aString ifPresent: [ :word | ^ [ compiling add: word ] ].
-	^ (aString allSatisfy: #isDigit)
-		  ifTrue: [ [ compiling add: (words at: #LIT); add: aString asInteger ] ]
-		  ifFalse: [ self wordNotFound: aString ]
+	compiling add: aForthWord
 ]
 
 { #category : 'initialization' }
+Forth >> defineWords [
+
+	^ {
+		  (#DUP -> (ForthWord new
+			    runtime: self;
+			    do: [ data addFirst: data first ])). "Duplicates the top item"
+		  (#DROP -> (ForthWord new
+			    runtime: self;
+			    do: [ data removeFirst ])). "Discards the top item"
+		  (#SWAP -> (ForthWord new
+			    runtime: self;
+			    do: [ data addFirst: (data removeAt: 2) ])). "Swaps the top two items"
+		  (#OVER -> (ForthWord new
+			    runtime: self;
+			    do: [ data addFirst: data second ])). "Copies the second item to the top"
+		  (#ROT -> (ForthWord new
+			    runtime: self;
+			    do: [ data addFirst: (data removeAt: 3) ])). "Rotates the third item to the top"
+		  (#+ -> (ForthWord new
+			    runtime: self;
+			    do: [ data at: 1 put: data removeFirst + data first ])). "add"
+		  (#- -> (ForthWord new
+			    runtime: self;
+			    do: [ data at: 1 put: data removeFirst negated + data first ])). "subtract"
+		  (#LIT -> (ForthWord new
+			    runtime: self;
+			    do: [ data addFirst: stream next ])). "push next value"
+		  (#EXIT -> (ForthWord new
+			    runtime: self;
+			    do: [ stream := return removeFirst ])). "Exit from a word definition"
+		  (#':' -> (ForthWord new
+			    runtime: self;
+			    setImmediate;
+			    do: [
+					    compiling ifNotNil: [ self error: 'no nested definitions' ].
+					    words at: (defining := self parse) put: (compiling := ForthWord new
+								                  runtime: self;
+								                  startDefinition) ])). "Define word"
+		  (#';' -> (ForthWord new
+			    runtime: self;
+			    setImmediate;
+			    do: [
+					    compiling ifNil: [ self error: '";" only in definitions' ].
+					    compiling finish: (words at: #EXIT).
+					    compiling := nil ])). "End define"
+		  (#IF -> (ForthWord new
+			    runtime: self;
+			    setImmediate)). "set up branches"
+		  (#THEN -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#ELSE -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#'[' -> (ForthWord new
+			    runtime: self;
+			    setImmediate)). "evaluate mode within a definition"
+		  (#']' -> (ForthWord new
+			    runtime: self;
+			    setImmediate)). "end evaluation mode"
+		  (#'S"' -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#BEGIN -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#UNTIL -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#WHILE -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#REPEAT -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#DO -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#'?DO' -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#LOOP -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#'+LOOP' -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#'."' -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#'C"' -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#LITERAL -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#POSTPONE -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#'(' -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#\ -> (ForthWord new
+			    runtime: self;
+			    setImmediate)).
+		  (#'[CHAR]' -> (ForthWord new
+			    runtime: self;
+			    setImmediate)) } asDictionary
+]
+
+{ #category : 'accessing' }
 Forth >> definition: aString [ 
 
 	words at: aString ifPresent: [ : word | |array|
@@ -43,125 +149,60 @@ Forth >> definition: aString [
 { #category : 'initialization' }
 Forth >> evaluate: aStreamOrString [
 
-	stream := aStreamOrString readStream.
+	stream := aStreamOrString readStream skipSeparators.
 	compiling := nil.
 	[ stream atEnd ] whileFalse: [
-		(return isEmpty ifTrue: [ self lookup: self parse ] ifFalse: [ stream next ] ) value ]
-]
-
-{ #category : 'initialization' }
-Forth >> execute: aBlock [
-
-	^ aBlock value
-]
-
-{ #category : 'initialization' }
-Forth >> ifCompiling: aBlock [ 
-
-	compiling ifNotNil: [ aBlock value ]
-]
-
-{ #category : 'initialization' }
-Forth >> immediateWords [
-
-	^ {
-		  (#':' -> [ "Define word"
-			   self ifCompiling: [ self error: 'no nested definitions' ].
-			   words at: (defining := self parse) put: self smudge.
-			   compiling := OrderedCollection new ]).
-		  (#';' -> [ "End define"
-			   self onlyCompiling: [
-					   | function |
-						compiling add: (words at: #EXIT).
-					   function := compiling asArray.
-					   compiling := nil.
-					   words at: defining put: [
-							   return addFirst: stream.
-							   stream := function readStream ] ] ]).
-		  (#IF -> [ "set up branches" self halt ]).
-		  (#'[' -> [ "evaluate mode within a definition" self halt ]).
-		  (#']' -> [ "end evaluation mode" self halt ]).
-		  (#THEN -> [ "" self halt ]).
-		  (#ELSE -> [ "" self halt ]).
-		  (#'S"' -> [ "" self halt ]).
-		  (#BEGIN -> [ "" self halt ]).
-		  (#UNTIL -> [ "" self halt ]).
-		  (#WHILE -> [ "" self halt ]).
-		  (#REPEAT -> [ "" self halt ]).
-		  (#DO -> [ "" self halt ]).
-		  (#'?DO' -> [ "" self halt ]).
-		  (#LOOP -> [ "" self halt ]).
-		  (#'+LOOP' -> [ "" self halt ]).
-		  (#'."' -> [ "" self halt ]).
-		  (#'C"' -> [ "" self halt ]).
-		  (#LITERAL -> [ "" self halt ]).
-		  (#'[CHAR]' -> [ "" self halt ]).
-		  (#POSTPONE -> [ "" self halt ]).
-		  (#'(' -> [ "" self halt ]).
-		  (#\ -> [ "" self halt ]) } asDictionary
+			(return isEmpty
+				 ifTrue: [ self lookup: self parse ]
+				 ifFalse: [ stream next ]) value ]
 ]
 
 { #category : 'initialization' }
 Forth >> initialize [
 
+	super initialize.
 	data := OrderedCollection new.
-	words := self runtimeWords.
-	immediates := self immediateWords.
+	words := self defineWords.
 	return := OrderedCollection new
+]
+
+{ #category : 'testing' }
+Forth >> isCompiling [
+
+	^ compiling isNotNil
 ]
 
 { #category : 'initialization' }
 Forth >> lookup: aString [
 
-	^ (self compiling: aString) ifNil: [ self running: aString ]
-]
-
-{ #category : 'initialization' }
-Forth >> onlyCompiling: aBlock [ 
-
-	compiling ifNil: [ ^ self error: 'Only in compiling mode' ].
-	^ aBlock value
+	^ words at: aString ifAbsent: [
+			  (aString allSatisfy: #isDigit)
+				  ifTrue: [
+						  compiling
+							  ifNotNil: [
+									  [
+										  compiling
+											  add: (words at: #LIT);
+											  add: aString asInteger ] ]
+							  ifNil: [ [ data addFirst: aString asInteger ] ] ]
+				  ifFalse: [ self error: 'word not found: ' , aString ] ]
 ]
 
 { #category : 'initialization' }
 Forth >> parse [
 
-	[ stream peek isSeparator ] whileTrue: [ stream next ].
-	^ String streamContents: [ : s | [ stream atEnd or: [stream peek isSeparator ] ] whileFalse: [ s nextPut: stream next ]]
+	stream skipSeparators.
+	^ String streamContents: [ :s | [ stream atEnd or: [ stream peek isSeparator ] ] whileFalse: [ s nextPut: stream next ] ]
 ]
 
-{ #category : 'initialization' }
-Forth >> running: aString [
+{ #category : 'executing' }
+Forth >> pushOnReturn: function [
 
-	immediates at: aString ifPresent: [ : word | ^ word].
-	words at: aString ifPresent: [ : word | ^ word ].
-	^ (aString allSatisfy: #isDigit)
-		ifTrue: [ [ data addFirst: aString asInteger ] ]
-		ifFalse: [ self wordNotFound: aString ]
+	return addFirst: stream.
+	stream := function readStream
 ]
 
-{ #category : 'initialization' }
-Forth >> runtimeWords [
-
-	^ {
-		  (#DUP -> [ "Duplicates the top item" data addFirst: data first ]).
-		  (#DROP -> [ "Discards the top item" data removeFirst ]).
-		  (#SWAP -> [ "Swaps the top two items" data addFirst: (data removeAt: 2) ]).
-		  (#OVER -> [ "Copies the second item to the top" data addFirst: data second ]).
-		  (#ROT -> [ "Rotates the third item to the top" data addFirst: (data removeAt: 3) ]).
-		  (#+ -> [ "add" data at: 1 put: data removeFirst + data first ]).
-		  (#- -> [ "subtract" data at: 1 put: data removeFirst negated + data first ]).
-		  (#LIT -> [ "push next value" data addFirst: stream next ]).
-		  (#EXIT -> [ "Exit from a word definition" stream := return removeFirst ]) } asDictionary
-]
-
-{ #category : 'initialization' }
-Forth >> smudge [
-
-	^ smudge ifNil: [ smudge := #smudge ]
-]
-
-{ #category : 'initialization' }
+{ #category : 'accessing' }
 Forth >> top [
 
 	^ data first
