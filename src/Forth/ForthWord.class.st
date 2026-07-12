@@ -9,7 +9,6 @@ Class {
 	#name : 'ForthWord',
 	#superclass : 'Object',
 	#instVars : [
-		'runtime',
 		'body',
 		'immediate',
 		'do'
@@ -18,6 +17,12 @@ Class {
 	#package : 'Forth',
 	#tag : 'Support'
 }
+
+{ #category : 'instance creation' }
+ForthWord class >> newImmediate [
+
+	^ self new setImmediate
+]
 
 { #category : 'adding' }
 ForthWord >> add: aForthWord [ 
@@ -31,8 +36,16 @@ ForthWord >> do: aBlock [
 	do := aBlock
 ]
 
+{ #category : 'evaluating' }
+ForthWord >> executeFor: runtime [
+
+	immediate ifTrue: [ ^ do value ].
+	runtime isCompiling ifFalse: [ ^ do value ].
+	runtime addToCompilation: self
+]
+
 { #category : 'defining' }
-ForthWord >> finish: aWord [
+ForthWord >> finish: aWord forRuntime: runtime [
 
 	body add: aWord.
 	body := body asArray.
@@ -45,12 +58,6 @@ ForthWord >> initialize [
 	super initialize.
 	immediate := false.
 	self do: [ self error: 'not defined' ]
-]
-
-{ #category : 'accessing' }
-ForthWord >> runtime: aForth [
-
-	runtime := aForth
 ]
 
 { #category : 'accessing' }
@@ -67,7 +74,7 @@ ForthWord >> startDefinition [
 ]
 
 { #category : 'evaluating' }
-ForthWord >> value [
+ForthWord >> value: runtime [
 
 	immediate ifTrue: [ ^ do value ].
 	runtime isCompiling ifFalse: [ ^ do value ].
