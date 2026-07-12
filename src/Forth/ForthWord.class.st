@@ -11,7 +11,8 @@ Class {
 	#instVars : [
 		'body',
 		'immediate',
-		'do'
+		'do',
+		'name'
 	],
 	#category : 'Forth-Support',
 	#package : 'Forth',
@@ -28,6 +29,12 @@ ForthWord class >> newImmediate [
 ForthWord >> add: aForthWord [ 
 
 	body add: aForthWord
+]
+
+{ #category : 'accessing' }
+ForthWord >> at: index put: anObject [
+
+	body at: index put: anObject
 ]
 
 { #category : 'defining' }
@@ -52,15 +59,36 @@ ForthWord >> initialize [
 	self do: [ self error: 'not defined' ]
 ]
 
+{ #category : 'defining' }
+ForthWord >> named: aString do: aBlock [
+
+	name := aString.
+	do := aBlock
+]
+
+{ #category : 'printing' }
+ForthWord >> printOn: aStream [
+
+	name ifNil: [ ^ super printOn: aStream ].
+	aStream << ': ' << name
+]
+
 { #category : 'accessing' }
 ForthWord >> setImmediate [
 
 	immediate := true
 ]
 
-{ #category : 'defining' }
-ForthWord >> startDefinition [
+{ #category : 'accessing' }
+ForthWord >> size [
 
+	^ body size
+]
+
+{ #category : 'defining' }
+ForthWord >> startDefinition: aString [
+
+	name := aString.
 	body := OrderedCollection new.
 	self do: [ self error: 'can''t call while defining' ]
 ]
@@ -68,6 +96,11 @@ ForthWord >> startDefinition [
 { #category : 'evaluating' }
 ForthWord >> value: runtime [
 
+	"Transcript
+		show: runtime position asString;
+		show: ' ';
+		show: name;
+		cr."
 	immediate ifTrue: [ ^ do value ].
 	runtime isCompiling ifFalse: [ ^ do value ].
 	runtime addToCompilation: self
