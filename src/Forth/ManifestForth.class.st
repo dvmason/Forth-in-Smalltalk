@@ -31,8 +31,22 @@ ManifestForth class >> ruleReCyclomaticComplexityRuleV1FalsePositive [
 ]
 
 { #category : 'code-critics' }
+ManifestForth class >> ruleSendsDifferentSuperRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#ForthCollection #at #false)) #'2026-07-15T22:39:41.436604-04:00') #(#(#RGMethodDefinition #(#ForthCollection #put: #false)) #'2026-07-15T23:05:31.440084-04:00') )
+]
+
+{ #category : 'code-critics' }
+ManifestForth class >> ruleSuperSendsNewRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#'ForthCollection class' #new #true)) #'2026-07-15T22:53:24.377414-04:00') #(#(#RGMethodDefinition #(#'ForthCollection class' #new: #true)) #'2026-07-15T22:56:13.89563-04:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestForth class >> ruleUnaryAccessingMethodWithoutReturnRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ForthWord #makeImmediate #false)) #'2026-07-12T08:04:21.058931-04:00') #(#(#RGMethodDefinition #(#ForthWord #setImmediate #false)) #'2026-07-12T08:05:22.507415-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ForthFunction #makeImmediate #false)) #'2026-07-12T08:04:21.058931-04:00') #(#(#RGMethodDefinition #(#ForthFunction #setImmediate #false)) #'2026-07-12T08:05:22.507415-04:00') )
 ]

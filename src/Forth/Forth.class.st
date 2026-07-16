@@ -12,9 +12,9 @@ Class {
 		'compiling',
 		'defining'
 	],
-	#category : 'Forth-Main',
+	#category : 'Forth-Core',
 	#package : 'Forth',
-	#tag : 'Main'
+	#tag : 'Core'
 }
 
 { #category : 'compiling' }
@@ -39,71 +39,90 @@ Forth >> compileOnly: aString [
 Forth >> defineWords [
 
 	^ {
-		  (#DUP -> (ForthWord new named: #DUP do: [ data addFirst: data first ])). "Duplicates the top item"
-		  (#DROP -> (ForthWord new named: #DROP do: [ data removeFirst ])). "Discards the top item"
-		  (#SWAP -> (ForthWord new named: #SWAP do: [ data addFirst: (data removeAt: 2) ])). "Swaps the top two items"
-		  (#OVER -> (ForthWord new named: #OVER do: [ data addFirst: data second ])). "Copies the second item to the top"
-		  (#ROT -> (ForthWord new named: #ROT do: [ data addFirst: (data removeAt: 3) ])). "Rotates the third item to the top"
-		  (#+ -> (ForthWord new named: #+ do: [ data at: 1 put: data removeFirst + data first ])). "add"
-		  (#- -> (ForthWord new named: #- do: [ data at: 1 put: data removeFirst negated + data first ])). "subtract"
-		  (#* -> (ForthWord new named: #* do: [
+		  (#DUP -> (ForthFunction new named: #DUP do: [ data addFirst: data first ])). "Duplicates the top item"
+		  (#DROP -> (ForthFunction new named: #DROP do: [ data removeFirst ])). "Discards the top item"
+		  (#SWAP -> (ForthFunction new named: #SWAP do: [ data addFirst: (data removeAt: 2) ])). "Swaps the top two items"
+		  (#OVER -> (ForthFunction new named: #OVER do: [ data addFirst: data second ])). "Copies the second item to the top"
+		  (#ROT -> (ForthFunction new named: #ROT do: [ data addFirst: (data removeAt: 3) ])). "Rotates the third item to the top"
+		  (#+ -> (ForthFunction new named: #+ do: [ data at: 1 put: data removeFirst + data first ])). "add"
+		  (#- -> (ForthFunction new named: #- do: [ data at: 1 put: data removeFirst negated + data first ])). "subtract"
+		  (#* -> (ForthFunction new named: #* do: [
 				    | right |
 				    right := data removeFirst.
 				    data at: 1 put: data first * right ])). "multiply"
-		  (#< -> (ForthWord new named: #< do: [
+		  (#< -> (ForthFunction new named: #< do: [
 				    | right |
 				    right := data removeFirst.
 				    data at: 1 put: (data first < right
 						     ifTrue: [ 1 ]
 						     ifFalse: [ 0 ]) ])). "less than"
-		  (#LIT -> (ForthWord new named: #LIT do: [ data addFirst: stream next ])). "push next value"
-		  (#EXIT -> (ForthWord new named: #EXIT do: [ stream := return removeFirst ])). "Exit from a word definition"
-		  (#'?BRANCH' -> (ForthWord new named: #'?BRANCH' do: [
+		  (#LIT -> (ForthFunction new named: #LIT do: [ data addFirst: stream next ])). "push next value"
+		  (#EXIT -> (ForthFunction new named: #EXIT do: [ stream := return removeFirst ])). "Exit from a word definition"
+		  (#'>R' -> (ForthFunction new named: #'>R' do: [ return addFirst: data removeFirst ])).
+		  (#'R>' -> (ForthFunction new named: #'R>' do: [ data addFirst: return removeFirst ])).
+		  (#'R@' -> (ForthFunction new named: #'R@' do: [ data addFirst: return first ])).
+		  (#I -> (ForthFunction new named: #I do: [ data addFirst: return first ])).
+		  (#'?BRANCH' -> (ForthFunction new named: #'?BRANCH' do: [
 				    data removeFirst = 0
 					    ifTrue: [ stream position: stream next ]
 					    ifFalse: [ stream next ] ])). "conditional branch if false"
-		  (#BRANCH -> (ForthWord new named: #BRANCH do: [ stream position: stream next ])). "unconditional branch"
-		  (#':' -> (ForthWord newImmediate do: [
+		  (#BRANCH -> (ForthFunction new named: #BRANCH do: [ stream position: stream next ])). "unconditional branch"
+		  (#':' -> (ForthFunction newImmediate named: #':' do: [
 				    compiling ifNotNil: [ self error: 'no nested definitions' ].
-				    words at: (defining := self parse) put: (compiling := ForthWord new startDefinition: defining) ])). "Define word"
-		  (#';' -> (ForthWord newImmediate do: [
+				    defining := self parse.
+					 compiling := ForthFunction new startDefinition: defining ])). "Define word"
+		  (#'::' -> (ForthFunction newImmediate named: #'::' do: [
+				    compiling ifNotNil: [ self error: 'no nested definitions' ].
+				    words at: (defining := self parse) put: (compiling := ForthFunction new startDefinition: defining) ])). "Define word allowing recursive call by name"
+		  (#';' -> (ForthFunction newImmediate named: #';' do: [
 				    self compileOnly: ';'.
 				    compiling finish: (words at: #EXIT) forRuntime: self.
+				    words at: defining put: compiling.
+					 defining := nil.
 				    compiling := nil ])). "End define"
-		  (#IF -> (ForthWord newImmediate do: [
+		  (#IF -> (ForthFunction newImmediate named: #IF do: [
 				    self compileOnly: #IF.
 				    compiling add: (words at: #'?BRANCH').
 				    compiling add: 0.
 				    data addFirst: compiling size.
 				    data addFirst: #IF ])). "set up branches"
-		  (#THEN -> (ForthWord newImmediate do: [
+		  (#THEN -> (ForthFunction newImmediate named: #THEN do: [
 				    self checkNesting: #IF.
 				    compiling at: data removeFirst put: compiling size ])).
-		  (#ELSE -> (ForthWord newImmediate do: [
+		  (#ELSE -> (ForthFunction newImmediate named: #ELSE do: [
 				    self checkNesting: #IF.
 				    compiling at: data removeFirst put: compiling size + 2.
 				    compiling add: (words at: #BRANCH).
 				    compiling add: 0.
 				    data addFirst: compiling size.
 				    data addFirst: #IF ])).
-		  (#'[' -> ForthWord newImmediate). "evaluate mode within a definition"
-		  (#']' -> ForthWord newImmediate). "end evaluation mode"
-		  (#'S"' -> ForthWord newImmediate).
-		  (#BEGIN -> ForthWord newImmediate).
-		  (#UNTIL -> ForthWord newImmediate).
-		  (#WHILE -> ForthWord newImmediate).
-		  (#REPEAT -> ForthWord newImmediate).
-		  (#DO -> ForthWord newImmediate).
-		  (#'?DO' -> ForthWord newImmediate).
-		  (#LOOP -> ForthWord newImmediate).
-		  (#'+LOOP' -> ForthWord newImmediate).
-		  (#'."' -> ForthWord newImmediate).
-		  (#'C"' -> ForthWord newImmediate).
-		  (#LITERAL -> ForthWord newImmediate).
-		  (#POSTPONE -> ForthWord newImmediate).
-		  (#'(' -> ForthWord newImmediate).
-		  (#\ -> ForthWord newImmediate).
-		  (#'[CHAR]' -> ForthWord newImmediate) } asDictionary
+		  (#DO -> (ForthFunction newImmediate named: #DO do: [
+				    self compileOnly: #DO.
+				    compiling add: (words at: #'(DO)').
+				    compiling add: 0.
+				    data addFirst: compiling size.
+				    data addFirst: #DO ])).
+		  (#'?DO' -> ForthFunction newImmediate).
+		  (#LOOP -> ForthFunction newImmediate).
+		  (#'+LOOP' -> ForthFunction newImmediate).
+		  (#'RECURSE' -> ForthFunction newImmediate).
+		  (#'[' -> ForthFunction newImmediate). "evaluate mode within a definition"
+		  (#']' -> ForthFunction newImmediate). "end evaluation mode"
+		  (#'S"' -> ForthFunction newImmediate).
+		  (#BEGIN -> ForthFunction newImmediate).
+		  (#UNTIL -> ForthFunction newImmediate).
+		  (#WHILE -> ForthFunction newImmediate).
+		  (#REPEAT -> ForthFunction newImmediate).
+		  (#'."' -> ForthFunction newImmediate).
+		  (#'C"' -> ForthFunction newImmediate).
+		  (#LITERAL -> ForthFunction newImmediate).
+		  (#VARIABLE -> ForthFunction newImmediate).
+		  (#'@' -> ForthFunction newImmediate).
+		  (#'!' -> ForthFunction newImmediate).
+		  (#POSTPONE -> ForthFunction newImmediate).
+		  (#'(' -> ForthFunction newImmediate).
+		  (#\ -> ForthFunction newImmediate).
+		  (#'[CHAR]' -> ForthFunction newImmediate) } asDictionary
 ]
 
 { #category : 'accessing' }
