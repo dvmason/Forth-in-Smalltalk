@@ -48,5 +48,5 @@ ManifestForth class >> ruleSuperSendsNewRuleV1FalsePositive [
 ManifestForth class >> ruleUnaryAccessingMethodWithoutReturnRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ForthFunction #makeImmediate #false)) #'2026-07-12T08:04:21.058931-04:00') #(#(#RGMethodDefinition #(#ForthFunction #setImmediate #false)) #'2026-07-12T08:05:22.507415-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ForthColonWord #makeImmediate #false)) #'2026-07-12T08:04:21.058931-04:00') #(#(#RGMethodDefinition #(#ForthColonWord #setImmediate #false)) #'2026-07-12T08:05:22.507415-04:00') )
 ]

@@ -39,97 +39,97 @@ Forth >> compileOnly: aString [
 Forth >> defineWords [
 
 	^ {
-		  (#DUP -> (ForthFunction new named: #DUP do: [ data addFirst: data first ])). "Duplicates the top item"
-		  (#DROP -> (ForthFunction new named: #DROP do: [ data removeFirst ])). "Discards the top item"
-		  (#SWAP -> (ForthFunction new named: #SWAP do: [ data addFirst: (data removeAt: 2) ])). "Swaps the top two items"
-		  (#OVER -> (ForthFunction new named: #OVER do: [ data addFirst: data second ])). "Copies the second item to the top"
-		  (#ROT -> (ForthFunction new named: #ROT do: [ data addFirst: (data removeAt: 3) ])). "Rotates the third item to the top"
-		  (#+ -> (ForthFunction new named: #+ do: [ data at: 1 put: data removeFirst + data first ])). "add"
-		  (#- -> (ForthFunction new named: #- do: [ data at: 1 put: data removeFirst negated + data first ])). "subtract"
-		  (#* -> (ForthFunction new named: #* do: [
+		  (#DUP -> (ForthColonWord new named: #DUP do: [ data addFirst: data first ])). "Duplicates the top item"
+		  (#DROP -> (ForthColonWord new named: #DROP do: [ data removeFirst ])). "Discards the top item"
+		  (#SWAP -> (ForthColonWord new named: #SWAP do: [ data addFirst: (data removeAt: 2) ])). "Swaps the top two items"
+		  (#OVER -> (ForthColonWord new named: #OVER do: [ data addFirst: data second ])). "Copies the second item to the top"
+		  (#ROT -> (ForthColonWord new named: #ROT do: [ data addFirst: (data removeAt: 3) ])). "Rotates the third item to the top"
+		  (#+ -> (ForthColonWord new named: #+ do: [ data at: 1 put: data removeFirst + data first ])). "add"
+		  (#- -> (ForthColonWord new named: #- do: [ data at: 1 put: data removeFirst negated + data first ])). "subtract"
+		  (#* -> (ForthColonWord new named: #* do: [
 				    | right |
 				    right := data removeFirst.
 				    data at: 1 put: data first * right ])). "multiply"
-		  (#< -> (ForthFunction new named: #< do: [
+		  (#< -> (ForthColonWord new named: #< do: [
 				    | right |
 				    right := data removeFirst.
 				    data at: 1 put: (data first < right
 						     ifTrue: [ 1 ]
 						     ifFalse: [ 0 ]) ])). "less than"
-		  (#LIT -> (ForthFunction new named: #LIT do: [ data addFirst: stream next ])). "push next value"
-		  (#EXIT -> (ForthFunction new named: #EXIT do: [ stream := return removeFirst ])). "Exit from a word definition"
-		  (#'>R' -> (ForthFunction new named: #'>R' do: [ return addFirst: data removeFirst ])).
-		  (#'R>' -> (ForthFunction new named: #'R>' do: [ data addFirst: return removeFirst ])).
-		  (#'R@' -> (ForthFunction new named: #'R@' do: [ data addFirst: return first ])).
-		  (#I -> (ForthFunction new named: #I do: [ data addFirst: return first ])).
-		  (#'?BRANCH' -> (ForthFunction new named: #'?BRANCH' do: [
+		  (#LIT -> (ForthColonWord new named: #LIT do: [ data addFirst: stream next ])). "push next value"
+		  (#EXIT -> (ForthColonWord new named: #EXIT do: [ stream := return removeFirst ])). "Exit from a word definition"
+		  (#'>R' -> (ForthColonWord new named: #'>R' do: [ return addFirst: data removeFirst ])).
+		  (#'R>' -> (ForthColonWord new named: #'R>' do: [ data addFirst: return removeFirst ])).
+		  (#'R@' -> (ForthColonWord new named: #'R@' do: [ data addFirst: return first ])).
+		  (#I -> (ForthColonWord new named: #I do: [ data addFirst: return first ])).
+		  (#'?BRANCH' -> (ForthColonWord new named: #'?BRANCH' do: [
 				    data removeFirst = 0
 					    ifTrue: [ stream position: stream next ]
 					    ifFalse: [ stream next ] ])). "conditional branch if false"
-		  (#BRANCH -> (ForthFunction new named: #BRANCH do: [ stream position: stream next ])). "unconditional branch"
-		  (#':' -> (ForthFunction newImmediate named: #':' do: [
+		  (#BRANCH -> (ForthColonWord new named: #BRANCH do: [ stream position: stream next ])). "unconditional branch"
+		  (#':' -> (ForthColonWord newImmediate named: #':' do: [
 				    compiling ifNotNil: [ self error: 'no nested definitions' ].
 				    defining := self parse.
-					 compiling := ForthFunction new startDefinition: defining ])). "Define word"
-		  (#'::' -> (ForthFunction newImmediate named: #'::' do: [
+					 compiling := ForthColonWord new startDefinition: defining ])). "Define word"
+		  (#'::' -> (ForthColonWord newImmediate named: #'::' do: [
 				    compiling ifNotNil: [ self error: 'no nested definitions' ].
-				    words at: (defining := self parse) put: (compiling := ForthFunction new startDefinition: defining) ])). "Define word allowing recursive call by name"
-		  (#';' -> (ForthFunction newImmediate named: #';' do: [
+				    words at: (defining := self parse) put: (compiling := ForthColonWord new startDefinition: defining) ])). "Define word allowing recursive call by name"
+		  (#';' -> (ForthColonWord newImmediate named: #';' do: [
 				    self compileOnly: ';'.
 				    compiling finish: (words at: #EXIT) forRuntime: self.
 				    words at: defining put: compiling.
 					 defining := nil.
 				    compiling := nil ])). "End define"
-		  (#IF -> (ForthFunction newImmediate named: #IF do: [
+		  (#IF -> (ForthColonWord newImmediate named: #IF do: [
 				    self compileOnly: #IF.
 				    compiling add: (words at: #'?BRANCH').
 				    compiling add: 0.
 				    data addFirst: compiling size.
 				    data addFirst: #IF ])). "set up branches"
-		  (#THEN -> (ForthFunction newImmediate named: #THEN do: [
+		  (#THEN -> (ForthColonWord newImmediate named: #THEN do: [
 				    self checkNesting: #IF.
 				    compiling at: data removeFirst put: compiling size ])).
-		  (#ELSE -> (ForthFunction newImmediate named: #ELSE do: [
+		  (#ELSE -> (ForthColonWord newImmediate named: #ELSE do: [
 				    self checkNesting: #IF.
 				    compiling at: data removeFirst put: compiling size + 2.
 				    compiling add: (words at: #BRANCH).
 				    compiling add: 0.
 				    data addFirst: compiling size.
 				    data addFirst: #IF ])).
-		  (#DO -> (ForthFunction newImmediate named: #DO do: [
+		  (#DO -> (ForthColonWord newImmediate named: #DO do: [
 				    self compileOnly: #DO.
 				    compiling add: (words at: #'(DO)').
 				    compiling add: 0.
 				    data addFirst: compiling size.
 				    data addFirst: #DO ])).
-		  (#'?DO' -> ForthFunction newImmediate).
-		  (#LOOP -> ForthFunction newImmediate).
-		  (#'+LOOP' -> ForthFunction newImmediate).
-		  (#'RECURSE' -> ForthFunction newImmediate).
-		  (#'[' -> ForthFunction newImmediate). "evaluate mode within a definition"
-		  (#']' -> ForthFunction newImmediate). "end evaluation mode"
-		  (#'S"' -> ForthFunction newImmediate).
-		  (#BEGIN -> ForthFunction newImmediate).
-		  (#UNTIL -> ForthFunction newImmediate).
-		  (#WHILE -> ForthFunction newImmediate).
-		  (#REPEAT -> ForthFunction newImmediate).
-		  (#'."' -> ForthFunction newImmediate).
-		  (#'C"' -> ForthFunction newImmediate).
-		  (#LITERAL -> ForthFunction newImmediate).
-		  (#VARIABLE -> ForthFunction newImmediate).
-		  (#'@' -> ForthFunction newImmediate).
-		  (#'!' -> ForthFunction newImmediate).
-		  (#POSTPONE -> ForthFunction newImmediate).
-		  (#'(' -> ForthFunction newImmediate).
-		  (#\ -> ForthFunction newImmediate).
-		  (#'[CHAR]' -> ForthFunction newImmediate) } asDictionary
+		  (#'?DO' -> ForthColonWord newImmediate).
+		  (#LOOP -> ForthColonWord newImmediate).
+		  (#'+LOOP' -> ForthColonWord newImmediate).
+		  (#'RECURSE' -> ForthColonWord newImmediate).
+		  (#'[' -> ForthColonWord newImmediate). "evaluate mode within a definition"
+		  (#']' -> ForthColonWord newImmediate). "end evaluation mode"
+		  (#'S"' -> ForthColonWord newImmediate).
+		  (#BEGIN -> ForthColonWord newImmediate).
+		  (#UNTIL -> ForthColonWord newImmediate).
+		  (#WHILE -> ForthColonWord newImmediate).
+		  (#REPEAT -> ForthColonWord newImmediate).
+		  (#'."' -> ForthColonWord newImmediate).
+		  (#'C"' -> ForthColonWord newImmediate).
+		  (#LITERAL -> ForthColonWord newImmediate).
+		  (#VARIABLE -> ForthColonWord newImmediate).
+		  (#'@' -> ForthColonWord newImmediate).
+		  (#'!' -> ForthColonWord newImmediate).
+		  (#POSTPONE -> ForthColonWord newImmediate).
+		  (#'(' -> ForthColonWord newImmediate).
+		  (#\ -> ForthColonWord newImmediate).
+		  (#'[CHAR]' -> ForthColonWord newImmediate) } asDictionary
 ]
 
 { #category : 'accessing' }
 Forth >> definition: aString [ 
 
 	words at: aString ifPresent: [ : word | |array|
-		word value: self.
+		word executeOn: self.
 		array := stream contents.
 		stream := return removeFirst.
 		^ array
@@ -144,7 +144,7 @@ Forth >> evaluate: aStreamOrString [
 	[ stream atEnd ] whileFalse: [
 			(return isEmpty
 				 ifTrue: [ self lookup: self parse ]
-				 ifFalse: [ stream next ]) value: self ]
+				 ifFalse: [ stream next ]) executeOn: self ]
 ]
 
 { #category : 'initialization' }

@@ -16,7 +16,7 @@ ForthCollectionTest >> testError [
 	x := ForthCollection new: 1.
 	x add: 0.
 	self assert: x at equals: 0.
-	self should: [ (x + 1) at ] raise: SubscriptOutOfBounds
+	self should: [ (x delta: 1) at ] raise: SubscriptOutOfBounds
 ]
 
 { #category : 'tests' }
@@ -25,7 +25,19 @@ ForthCollectionTest >> testSimple [
 	| x y |
 	x := ForthCollection with: 7 with: 19.
 	self assert: x at equals: 7.
-	y := x + 2 - 1.
+	y := x delta: 1.
 	y put: 42.
-	self assert: (x + 1) at equals: 42
+	self assert: (x at: 2) equals: 42
+]
+
+{ #category : 'tests' }
+ForthCollectionTest >> testStream [
+
+	| x |
+	x := ForthCollection new: 10.
+	x add: 17; add: 42.
+	self assert: x capacity equals: 10.
+	self assert: x readStream next equals: 17.
+	self assert: x capacity equals: 2.
+
 ]

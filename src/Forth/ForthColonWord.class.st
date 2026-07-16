@@ -5,7 +5,7 @@ I have a block that I execute in response to the `value:` message.
 
 "
 Class {
-	#name : 'ForthFunction',
+	#name : 'ForthColonWord',
 	#superclass : 'ForthWord',
 	#instVars : [
 		'body',
@@ -18,31 +18,40 @@ Class {
 }
 
 { #category : 'instance creation' }
-ForthFunction class >> newImmediate [
+ForthColonWord class >> newImmediate [
 
 	^ self new setImmediate
 ]
 
 { #category : 'adding' }
-ForthFunction >> add: aForthWord [ 
+ForthColonWord >> add: aForthWord [ 
 
 	body add: aForthWord
 ]
 
 { #category : 'accessing' }
-ForthFunction >> at: index put: anObject [
+ForthColonWord >> at: index put: anObject [
 
 	body at: index put: anObject
 ]
 
 { #category : 'defining' }
-ForthFunction >> do: aBlock [
+ForthColonWord >> do: aBlock [
 
 	do := aBlock
 ]
 
+{ #category : 'accessing' }
+ForthColonWord >> executeOn: runtime [
+
+	runtime trace: self.
+	immediate ifTrue: [ ^ do value ].
+	runtime isCompiling ifFalse: [ ^ do value ].
+	runtime addToCompilation: self
+]
+
 { #category : 'defining' }
-ForthFunction >> finish: aWord forRuntime: runtime [
+ForthColonWord >> finish: aWord forRuntime: runtime [
 
 	body add: aWord.
 	body := body asArray.
@@ -50,7 +59,7 @@ ForthFunction >> finish: aWord forRuntime: runtime [
 ]
 
 { #category : 'initialization' }
-ForthFunction >> initialize [
+ForthColonWord >> initialize [
 
 	super initialize.
 	immediate := false.
@@ -58,37 +67,28 @@ ForthFunction >> initialize [
 ]
 
 { #category : 'defining' }
-ForthFunction >> named: aString do: aBlock [
+ForthColonWord >> named: aString do: aBlock [
 
 	name := aString.
 	do := aBlock
 ]
 
 { #category : 'accessing' }
-ForthFunction >> setImmediate [
+ForthColonWord >> setImmediate [
 
 	immediate := true
 ]
 
 { #category : 'accessing' }
-ForthFunction >> size [
+ForthColonWord >> size [
 
 	^ body size
 ]
 
 { #category : 'defining' }
-ForthFunction >> startDefinition: aString [
+ForthColonWord >> startDefinition: aString [
 
 	name := aString.
 	body := OrderedCollection new.
 	self do: [ self error: 'can''t call while defining' ]
-]
-
-{ #category : 'accessing' }
-ForthFunction >> value: runtime [
-
-	runtime trace: self.
-	immediate ifTrue: [ ^ do value ].
-	runtime isCompiling ifFalse: [ ^ do value ].
-	runtime addToCompilation: self
 ]

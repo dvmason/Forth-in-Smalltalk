@@ -26,16 +26,16 @@ ForthCollection class >> new: anInteger [
 	^ (super new: anInteger) initialize
 ]
 
-{ #category : 'arithmetic' }
-ForthCollection >> + anInteger [
+{ #category : 'converting' }
+ForthCollection >> asArray [
+	"Convert a ForthCollection into an Array."
 
-	^ self shallowCopy offset: offset + anInteger
-]
+	"Replace our array with the new Array so that if this happens repeatedly it is low cost."
 
-{ #category : 'arithmetic' }
-ForthCollection >> - anInteger [
+	"(ForthCollection new add: 42; add: 43; yourself) asArray >>> #(42 43)"
 
-	^ self shallowCopy offset: offset - anInteger
+	self capacity = self size ifTrue: [ ^ array ].
+	^ array := super asArray
 ]
 
 { #category : 'accessing' }
@@ -44,16 +44,10 @@ ForthCollection >> at [
 	^ super at: offset
 ]
 
-{ #category : 'accessing' }
-ForthCollection >> at: anInteger [
+{ #category : 'arithmetic' }
+ForthCollection >> delta: anInteger [
 
-	^ self shouldNotImplement
-]
-
-{ #category : 'accessing' }
-ForthCollection >> at: _unused put: _also [
-
-	^ self shouldNotImplement
+	^ self shallowCopy offset: offset + anInteger
 ]
 
 { #category : 'initialization' }
