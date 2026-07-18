@@ -5,12 +5,13 @@ Class {
 	#name : 'Forth',
 	#superclass : 'Object',
 	#instVars : [
-		'data',
 		'words',
-		'return',
-		'stream',
-		'compiling',
-		'defining'
+		'dataStack',
+		'returnStack',
+		'latestWord',
+		'currentStream',
+		'isCompiling',
+		'inputStream'
 	],
 	#category : 'Forth-Core',
 	#package : 'Forth',
@@ -20,92 +21,97 @@ Class {
 { #category : 'compiling' }
 Forth >> addToCompilation: aForthWord [ 
 
-	compiling add: aForthWord
+	latestWord add: aForthWord
 ]
 
 { #category : 'error testing' }
 Forth >> checkNesting: aString [ 
 
-	data removeFirst = #IF ifFalse: [ self error: 'improper nesting of IF/DO' ]
+	dataStack removeFirst = #IF ifFalse: [ self error: 'improper nesting of IF/DO' ]
 ]
 
 { #category : 'compiling' }
 Forth >> compileOnly: aString [ 
 
-	compiling ifNil: [ self error: '"', aString, ';" only in definitions' ]
+	latestWord ifNil: [ self error: '"', aString, ';" only in definitions' ]
+]
+
+{ #category : 'accessing' }
+Forth >> dataStack [
+
+	^ dataStack
 ]
 
 { #category : 'initialization' }
 Forth >> defineWords [
 
 	^ {
-		  (#DUP -> (ForthColonWord new named: #DUP do: [ data addFirst: data first ])). "Duplicates the top item"
-		  (#DROP -> (ForthColonWord new named: #DROP do: [ data removeFirst ])). "Discards the top item"
-		  (#SWAP -> (ForthColonWord new named: #SWAP do: [ data addFirst: (data removeAt: 2) ])). "Swaps the top two items"
-		  (#OVER -> (ForthColonWord new named: #OVER do: [ data addFirst: data second ])). "Copies the second item to the top"
-		  (#ROT -> (ForthColonWord new named: #ROT do: [ data addFirst: (data removeAt: 3) ])). "Rotates the third item to the top"
-		  (#+ -> (ForthColonWord new named: #+ do: [ data at: 1 put: data removeFirst + data first ])). "add"
-		  (#- -> (ForthColonWord new named: #- do: [ data at: 1 put: data removeFirst negated + data first ])). "subtract"
-		  (#* -> (ForthColonWord new named: #* do: [
-				    | right |
-				    right := data removeFirst.
-				    data at: 1 put: data first * right ])). "multiply"
-		  (#< -> (ForthColonWord new named: #< do: [
-				    | right |
-				    right := data removeFirst.
-				    data at: 1 put: (data first < right
-						     ifTrue: [ 1 ]
-						     ifFalse: [ 0 ]) ])). "less than"
-		  (#LIT -> (ForthColonWord new named: #LIT do: [ data addFirst: stream next ])). "push next value"
-		  (#EXIT -> (ForthColonWord new named: #EXIT do: [ stream := return removeFirst ])). "Exit from a word definition"
-		  (#'>R' -> (ForthColonWord new named: #'>R' do: [ return addFirst: data removeFirst ])).
-		  (#'R>' -> (ForthColonWord new named: #'R>' do: [ data addFirst: return removeFirst ])).
-		  (#'R@' -> (ForthColonWord new named: #'R@' do: [ data addFirst: return first ])).
-		  (#I -> (ForthColonWord new named: #I do: [ data addFirst: return first ])).
+		  (ForthWDUP dataStack: dataStack) asAssociation. "Duplicates the top item"
+		  (ForthWDROP dataStack: dataStack) asAssociation. "Discards the top item"
+		  (ForthWSWAP dataStack: dataStack) asAssociation. "Swaps the top two items"
+		  (ForthWOVER dataStack: dataStack) asAssociation. "Copies the second item to the top"
+		  (ForthWROT dataStack: dataStack) asAssociation. "Rotates the third item to the top"
+		  ((ForthWplus dataStack: dataStack) named: #+) asAssociation. "add"
+		  ((ForthWminus dataStack: dataStack) named: #-) asAssociation. "subtract"
+		  ((ForthWtimes dataStack: dataStack) named: #*) asAssociation. "multiply"
+		  ((ForthWlessthan dataStack: dataStack) named: #<) asAssociation. "less than"
+		  (ForthWasBoolean dataStack: dataStack) asAssociation.
+		  (ForthWAND dataStack: dataStack) asAssociation.
+		  (ForthWparen new named: #'(') asAssociation.
+		  (ForthWbackslash new named: #\) asAssociation.
+		  (ForthWMakeSelector new) asAssociation.
+		  (#LIT -> (ForthColonWord new named: #LIT do: [ dataStack addFirst: currentStream next ])). "push next value"
+		  (#EXIT -> (ForthColonWord new named: #EXIT do: [ currentStream := returnStack removeFirst ])). "Exit from a word definition"
+		  (#'>R' -> (ForthColonWord new named: #'>R' do: [ returnStack addFirst: dataStack removeFirst ])).
+		  (#'R>' -> (ForthColonWord new named: #'R>' do: [ dataStack addFirst: returnStack removeFirst ])).
+		  (#'R@' -> (ForthColonWord new named: #'R@' do: [ dataStack addFirst: returnStack first ])).
+		  (#I -> (ForthColonWord new named: #I do: [ dataStack addFirst: returnStack first ])).
 		  (#'?BRANCH' -> (ForthColonWord new named: #'?BRANCH' do: [
-				    data removeFirst = 0
-					    ifTrue: [ stream position: stream next ]
-					    ifFalse: [ stream next ] ])). "conditional branch if false"
-		  (#BRANCH -> (ForthColonWord new named: #BRANCH do: [ stream position: stream next ])). "unconditional branch"
+				    dataStack removeFirst asForthBoolean
+					    ifFalse: [ currentStream position: currentStream next ]
+					    ifTrue: [ currentStream next ] ])). "conditional branch if false"
+		  (#BRANCH -> (ForthColonWord new named: #BRANCH do: [ currentStream position: currentStream next ])). "unconditional branch"
 		  (#':' -> (ForthColonWord newImmediate named: #':' do: [
-				    compiling ifNotNil: [ self error: 'no nested definitions' ].
-				    defining := self parse.
-					 compiling := ForthColonWord new startDefinition: defining ])). "Define word"
+				    self isCompiling ifTrue: [ self error: 'no nested definitions' ].
+				    self setCompiling.
+				    latestWord := ForthColonWord new startDefinition: self parseNextToken ])). "Define word"
 		  (#'::' -> (ForthColonWord newImmediate named: #'::' do: [
-				    compiling ifNotNil: [ self error: 'no nested definitions' ].
-				    words at: (defining := self parse) put: (compiling := ForthColonWord new startDefinition: defining) ])). "Define word allowing recursive call by name"
+				    latestWord ifNotNil: [ self error: 'no nested definitions' ].
+				    self setCompiling.
+				    latestWord := ForthColonWord new startDefinition: self parseNextToken. "Define word"
+				    words at: latestWord name put: latestWord ])). "Define word allowing recursive call by name"
 		  (#';' -> (ForthColonWord newImmediate named: #';' do: [
 				    self compileOnly: ';'.
-				    compiling finish: (words at: #EXIT) forRuntime: self.
-				    words at: defining put: compiling.
-					 defining := nil.
-				    compiling := nil ])). "End define"
+				    latestWord finish: (words at: #EXIT) forRuntime: self.
+				    words at: latestWord name put: latestWord.
+				    self notCompiling.
+				    latestWord := nil ])). "End define"
 		  (#IF -> (ForthColonWord newImmediate named: #IF do: [
 				    self compileOnly: #IF.
-				    compiling add: (words at: #'?BRANCH').
-				    compiling add: 0.
-				    data addFirst: compiling size.
-				    data addFirst: #IF ])). "set up branches"
+				    latestWord add: (words at: #'?BRANCH').
+				    latestWord add: 0.
+				    dataStack addFirst: latestWord size.
+				    dataStack addFirst: #IF ])). "set up branches"
 		  (#THEN -> (ForthColonWord newImmediate named: #THEN do: [
 				    self checkNesting: #IF.
-				    compiling at: data removeFirst put: compiling size ])).
+				    latestWord at: dataStack removeFirst put: latestWord size ])).
 		  (#ELSE -> (ForthColonWord newImmediate named: #ELSE do: [
 				    self checkNesting: #IF.
-				    compiling at: data removeFirst put: compiling size + 2.
-				    compiling add: (words at: #BRANCH).
-				    compiling add: 0.
-				    data addFirst: compiling size.
-				    data addFirst: #IF ])).
+				    latestWord at: dataStack removeFirst put: latestWord size + 2.
+				    latestWord add: (words at: #BRANCH).
+				    latestWord add: 0.
+				    dataStack addFirst: latestWord size.
+				    dataStack addFirst: #IF ])).
 		  (#DO -> (ForthColonWord newImmediate named: #DO do: [
 				    self compileOnly: #DO.
-				    compiling add: (words at: #'(DO)').
-				    compiling add: 0.
-				    data addFirst: compiling size.
-				    data addFirst: #DO ])).
+				    latestWord add: (words at: #'(DO)').
+				    latestWord add: 0.
+				    dataStack addFirst: latestWord size.
+				    dataStack addFirst: #DO ])).
 		  (#'?DO' -> ForthColonWord newImmediate).
 		  (#LOOP -> ForthColonWord newImmediate).
 		  (#'+LOOP' -> ForthColonWord newImmediate).
-		  (#'RECURSE' -> ForthColonWord newImmediate).
+		  (#RECURSE -> ForthColonWord newImmediate).
 		  (#'[' -> ForthColonWord newImmediate). "evaluate mode within a definition"
 		  (#']' -> ForthColonWord newImmediate). "end evaluation mode"
 		  (#'S"' -> ForthColonWord newImmediate).
@@ -117,11 +123,9 @@ Forth >> defineWords [
 		  (#'C"' -> ForthColonWord newImmediate).
 		  (#LITERAL -> ForthColonWord newImmediate).
 		  (#VARIABLE -> ForthColonWord newImmediate).
-		  (#'@' -> ForthColonWord newImmediate).
-		  (#'!' -> ForthColonWord newImmediate).
+		  (#@ -> ForthColonWord newImmediate).
+		  (#! -> ForthColonWord newImmediate).
 		  (#POSTPONE -> ForthColonWord newImmediate).
-		  (#'(' -> ForthColonWord newImmediate).
-		  (#\ -> ForthColonWord newImmediate).
 		  (#'[CHAR]' -> ForthColonWord newImmediate) } asDictionary
 ]
 
@@ -130,8 +134,8 @@ Forth >> definition: aString [
 
 	words at: aString ifPresent: [ : word | |array|
 		word executeOn: self.
-		array := stream contents.
-		stream := return removeFirst.
+		array := currentStream contents.
+		currentStream := returnStack removeFirst.
 		^ array
 	]
 ]
@@ -139,67 +143,111 @@ Forth >> definition: aString [
 { #category : 'initialization' }
 Forth >> evaluate: aStreamOrString [
 
-	stream := aStreamOrString readStream skipSeparators.
-	compiling := nil.
-	[ stream atEnd ] whileFalse: [
-			(return isEmpty
-				 ifTrue: [ self lookup: self parse ]
-				 ifFalse: [ stream next ]) executeOn: self ]
+	currentStream := aStreamOrString readStream skipSeparators.
+	inputStream := currentStream.
+	latestWord := nil.
+	self notCompiling.
+	[ currentStream atEnd ] whileFalse: [
+		currentStream executeNextOn: self ]
+
+]
+
+{ #category : 'executing' }
+Forth >> evaluateOneWord [
+
+	currentStream skipSeparators atEnd ifFalse: [ self evaluateOneWord: self parseNextToken ]
+]
+
+{ #category : 'initialization' }
+Forth >> evaluateOneWord: aString [
+
+	| word |
+	word := self lookup: aString.
+	word isForthWord ifTrue: [
+			self isCompiling and: [ word isImmediate ifFalse: [ ^ latestWord add: word ] ].
+			^ word executeOn: self ].
+	^ self isCompiling
+		  ifTrue: [
+				  latestWord
+					  add: (words at: #LIT);
+					  add: aString asInteger ]
+		  ifFalse: [ dataStack addFirst: word ]
+]
+
+{ #category : 'executing' }
+Forth >> executeNext [
+
+	^ currentStream next executeOn: self
 ]
 
 { #category : 'initialization' }
 Forth >> initialize [
 
 	super initialize.
-	data := OrderedCollection new.
+	dataStack := OrderedCollection new.
 	words := self defineWords.
-	return := OrderedCollection new
+	returnStack := OrderedCollection new.
+	isCompiling := false
+]
+
+{ #category : 'accessing' }
+Forth >> inputStream [
+
+	^ inputStream
 ]
 
 { #category : 'testing' }
 Forth >> isCompiling [
 
-	^ compiling isNotNil
+	^ isCompiling
 ]
 
 { #category : 'initialization' }
 Forth >> lookup: aString [
 
-	^ words at: aString ifAbsent: [
-			  (aString allSatisfy: #isDigit)
-				  ifTrue: [
-						  compiling
-							  ifNotNil: [
-									  [ : _ |
-										  compiling
-											  add: (words at: #LIT);
-											  add: aString asInteger ] ]
-							  ifNil: [ [ : _ | data addFirst: aString asInteger ] ] ]
-				  ifFalse: [ self error: 'word not found: ' , aString ] ]
+	| aStream possibleNumber |
+	words at: aString ifPresent: [ :word | ^ word ].
+	aStream := aString readStream.
+	possibleNumber := Number readFrom: aStream.
+	aStream atEnd ifFalse: [ self error: 'word not found: ' , aString ].
+	^ possibleNumber
+]
+
+{ #category : 'testing' }
+Forth >> notCompiling [
+
+	isCompiling := false
 ]
 
 { #category : 'initialization' }
-Forth >> parse [
+Forth >> parseNextToken [
 
-	stream skipSeparators.
-	^ String streamContents: [ :s | [ stream atEnd or: [ stream peek isSeparator ] ] whileFalse: [ s nextPut: stream next ] ]
+	inputStream skipSeparators.
+	^ String streamContents: [ :s |
+		  [ inputStream atEnd or: [ inputStream peek isSeparator ] ] whileFalse: [ s nextPut: inputStream next ] ]
 ]
 
 { #category : 'accessing' }
 Forth >> position [
 
-	^ stream position
+	^ currentStream position
 ]
 
 { #category : 'executing' }
-Forth >> pushOnReturn: function [
+Forth >> pushOnReturn: aForthWordStream [
 
-	return addFirst: stream.
-	stream := function readStream
+	returnStack addFirst: currentStream.
+	currentStream := aForthWordStream
+]
+
+{ #category : 'testing' }
+Forth >> setCompiling [
+
+	isCompiling := true
 ]
 
 { #category : 'accessing' }
 Forth >> top [
 
-	^ data first
+	^ dataStack first
 ]

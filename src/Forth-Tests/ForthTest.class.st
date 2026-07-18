@@ -32,10 +32,10 @@ ForthTest >> testFibonacci [
     DUP 2 < IF 
         \ Base cases: if n is 0 or 1, just return n
     ELSE
-        DUP 1- RECURSE    \ Compute Fib(n-1)
+        DUP 1 - RECURSE    \ Compute Fib(n-1)
         SWAP 2 - RECURSE  \ Compute Fib(n-2)
         +                 \ Add them together
-    THEN ;' asForth.
+    THEN ;' halt; asForth.
 	self assert: (fib evaluate: '1 RECUR-FIB') asForth top equals: 1.
 	self assert: (fib evaluate: '2 RECUR-FIB') asForth top equals: 1.
 	self assert: (fib evaluate: '3 RECUR-FIB') asForth top equals: 2.
@@ -94,6 +94,17 @@ ForthTest >> testIF [
 	self assert: (foo at: 12) equals: (f lookup: #EXIT).
 	self assert: ': foo 2 < IF 3 ELSE 42 THEN ; 3 foo' asForth top equals: 42.
 	self assert: ': foo 2 < IF 3 ELSE 1 IF 42 ELSE 17 THEN THEN ; 3 foo' asForth top equals: 42
+]
+
+{ #category : 'tests' }
+ForthTest >> testLookup [
+
+	self assert: (Forth new lookup: '42') equals: 42.
+	self assert: (Forth new lookup: '16r2a') equals: 42.
+	self should: [ Forth new lookup: '42foo' ] raise: Error.
+	self should: [ Forth new lookup: 'wefkae323^^&' ] raise: Error.
+	self assert: (Forth new lookup: 'DO') isForthWord.
+	self assert: (Forth new lookup: 'DUP') isForthWord
 ]
 
 { #category : 'tests' }

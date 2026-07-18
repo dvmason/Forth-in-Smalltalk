@@ -48,5 +48,12 @@ ManifestForth class >> ruleSuperSendsNewRuleV1FalsePositive [
 ManifestForth class >> ruleUnaryAccessingMethodWithoutReturnRuleV1FalsePositive [
 
 	<ignoreForCoverage>
-	^ #(#(#(#RGMethodDefinition #(#ForthColonWord #makeImmediate #false)) #'2026-07-12T08:04:21.058931-04:00') #(#(#RGMethodDefinition #(#ForthColonWord #setImmediate #false)) #'2026-07-12T08:05:22.507415-04:00') )
+	^ #(#(#(#RGMethodDefinition #(#ForthColonWord #makeImmediate #false)) #'2026-07-12T08:04:21.058931-04:00') #(#(#RGMethodDefinition #(#ForthColonWord #setImmediate #false)) #'2026-07-12T08:05:22.507415-04:00') #(#(#RGMethodDefinition #(#ForthPrimitiveWord #setImmediate #false)) #'2026-07-18T10:17:45.75162-04:00') #(#(#RGMethodDefinition #(#ForthPrimitiveWord #notImmediate #false)) #'2026-07-18T10:18:44.624073-04:00') #(#(#RGMethodDefinition #(#ForthWord #notImmediate #false)) #'2026-07-18T11:49:01.105183-04:00') #(#(#RGMethodDefinition #(#ForthWord #setImmediate #false)) #'2026-07-18T11:49:09.279759-04:00') )
+]
+
+{ #category : 'code-critics' }
+ManifestForth class >> ruleUsesAddRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#Forth #evaluateOneWord: #false)) #'2026-07-18T09:29:27.259964-04:00') )
 ]

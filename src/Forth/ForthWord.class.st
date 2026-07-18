@@ -8,12 +8,55 @@ Class {
 	#name : 'ForthWord',
 	#superclass : 'Object',
 	#instVars : [
-		'name'
+		'name',
+		'immediate'
 	],
-	#category : 'Forth-Support',
+	#category : 'Forth-Words',
 	#package : 'Forth',
-	#tag : 'Support'
+	#tag : 'Words'
 }
+
+{ #category : 'converting' }
+ForthWord >> asAssociation [
+
+	^ self name -> self
+]
+
+{ #category : 'accessing' }
+ForthWord >> executeOn: runtime [
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'testing' }
+ForthWord >> isForthWord [
+
+	^ true
+]
+
+{ #category : 'initialization' }
+ForthWord >> isImmediate [
+
+	^ immediate
+]
+
+{ #category : 'accessing' }
+ForthWord >> name [
+
+	^ name ifNil: [ name := self className allButFirst: 6 ]
+]
+
+{ #category : 'instance creation' }
+ForthWord >> named: aString [ 
+
+	name := aString
+]
+
+{ #category : 'accessing' }
+ForthWord >> notImmediate [
+
+	immediate := false
+]
 
 { #category : 'printing' }
 ForthWord >> printOn: aStream [
@@ -23,7 +66,7 @@ ForthWord >> printOn: aStream [
 ]
 
 { #category : 'accessing' }
-ForthWord >> value: runtime [
+ForthWord >> setImmediate [
 
-	^ self subclassResponsibility
+	immediate := true
 ]

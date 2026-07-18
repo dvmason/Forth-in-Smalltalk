@@ -9,12 +9,11 @@ Class {
 	#superclass : 'ForthWord',
 	#instVars : [
 		'body',
-		'immediate',
 		'do'
 	],
-	#category : 'Forth-Support',
+	#category : 'Forth-Words',
 	#package : 'Forth',
-	#tag : 'Support'
+	#tag : 'Words'
 }
 
 { #category : 'instance creation' }
@@ -45,9 +44,7 @@ ForthColonWord >> do: aBlock [
 ForthColonWord >> executeOn: runtime [
 
 	runtime trace: self.
-	immediate ifTrue: [ ^ do value ].
-	runtime isCompiling ifFalse: [ ^ do value ].
-	runtime addToCompilation: self
+	^ do value
 ]
 
 { #category : 'defining' }
@@ -55,7 +52,7 @@ ForthColonWord >> finish: aWord forRuntime: runtime [
 
 	body add: aWord.
 	body := body asArray.
-	self do: [ runtime pushOnReturn: body readStream ]
+	self do: [ runtime pushOnReturn: (ForthWordStream on: body) ]
 ]
 
 { #category : 'initialization' }
@@ -71,12 +68,6 @@ ForthColonWord >> named: aString do: aBlock [
 
 	name := aString.
 	do := aBlock
-]
-
-{ #category : 'accessing' }
-ForthColonWord >> setImmediate [
-
-	immediate := true
 ]
 
 { #category : 'accessing' }
