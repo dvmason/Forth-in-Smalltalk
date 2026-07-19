@@ -11,7 +11,8 @@ Class {
 		'latestWord',
 		'currentStream',
 		'isCompiling',
-		'inputStream'
+		'inputStream',
+		'output'
 	],
 	#category : 'Forth-Core',
 	#package : 'Forth',
@@ -46,20 +47,23 @@ Forth >> dataStack [
 Forth >> defineWords [
 
 	^ {
-		  (ForthWDUP dataStack: dataStack) asAssociation. "Duplicates the top item"
-		  (ForthWDROP dataStack: dataStack) asAssociation. "Discards the top item"
-		  (ForthWSWAP dataStack: dataStack) asAssociation. "Swaps the top two items"
-		  (ForthWOVER dataStack: dataStack) asAssociation. "Copies the second item to the top"
-		  (ForthWROT dataStack: dataStack) asAssociation. "Rotates the third item to the top"
-		  ((ForthWplus dataStack: dataStack) named: #+) asAssociation. "add"
-		  ((ForthWminus dataStack: dataStack) named: #-) asAssociation. "subtract"
-		  ((ForthWtimes dataStack: dataStack) named: #*) asAssociation. "multiply"
-		  ((ForthWlessthan dataStack: dataStack) named: #<) asAssociation. "less than"
+		  (ForthWDUP dataStack: dataStack) asAssociation.
+		  (ForthWDROP dataStack: dataStack) asAssociation.
+		  (ForthWSWAP dataStack: dataStack) asAssociation.
+		  (ForthWOVER dataStack: dataStack) asAssociation.
+		  (ForthWROT dataStack: dataStack) asAssociation.
+		  ((ForthWplus dataStack: dataStack) named: #+) asAssociation.
+		  ((ForthWminus dataStack: dataStack) named: #-) asAssociation.
+		  ((ForthWtimes dataStack: dataStack) named: #*) asAssociation.
+		  ((ForthWlessthan dataStack: dataStack) named: #<) asAssociation.
+		  ((ForthWequal dataStack: dataStack) named: #=) asAssociation.
 		  (ForthWasBoolean dataStack: dataStack) asAssociation.
 		  (ForthWAND dataStack: dataStack) asAssociation.
 		  (ForthWparen new named: #'(') asAssociation.
 		  (ForthWbackslash new named: #\) asAssociation.
-		  (ForthWMakeSelector new) asAssociation.
+		  (ForthWdotQuote new named: #'."') asAssociation.
+		  (ForthWdoDotQuote new named: #'(.")') asAssociation.
+		  ForthWMakeSelector new asAssociation.
 		  (#LIT -> (ForthColonWord new named: #LIT do: [ dataStack addFirst: currentStream next ])). "push next value"
 		  (#EXIT -> (ForthColonWord new named: #EXIT do: [ currentStream := returnStack removeFirst ])). "Exit from a word definition"
 		  (#'>R' -> (ForthColonWord new named: #'>R' do: [ returnStack addFirst: dataStack removeFirst ])).
@@ -119,7 +123,6 @@ Forth >> defineWords [
 		  (#UNTIL -> ForthColonWord newImmediate).
 		  (#WHILE -> ForthColonWord newImmediate).
 		  (#REPEAT -> ForthColonWord newImmediate).
-		  (#'."' -> ForthColonWord newImmediate).
 		  (#'C"' -> ForthColonWord newImmediate).
 		  (#LITERAL -> ForthColonWord newImmediate).
 		  (#VARIABLE -> ForthColonWord newImmediate).
@@ -150,6 +153,16 @@ Forth >> evaluate: aStreamOrString [
 	[ currentStream atEnd ] whileFalse: [
 		currentStream executeNextOn: self ]
 
+]
+
+{ #category : 'initialization' }
+Forth >> evaluate: aStreamOrString on: aStream [
+
+	| saveOutput |
+	saveOutput := output.
+	[
+		output := aStream.
+		self evaluate: aStreamOrString ] ensure: [ output := saveOutput ]
 ]
 
 { #category : 'executing' }
@@ -187,7 +200,8 @@ Forth >> initialize [
 	dataStack := OrderedCollection new.
 	words := self defineWords.
 	returnStack := OrderedCollection new.
-	isCompiling := false
+	isCompiling := false.
+	output := Transcript
 ]
 
 { #category : 'accessing' }
@@ -213,18 +227,39 @@ Forth >> lookup: aString [
 	^ possibleNumber
 ]
 
+{ #category : 'accessing' }
+Forth >> nextPutAll: aString [
+
+	output nextPutAll: aString
+]
+
+{ #category : 'stream access' }
+Forth >> nextWord [
+
+	^ currentStream next
+]
+
 { #category : 'testing' }
 Forth >> notCompiling [
 
 	isCompiling := false
 ]
 
+{ #category : 'parsing' }
+Forth >> parseInputUntil: aCharacter [ 
+
+		| next |
+	^ String streamContents: [ :s |
+		  [ inputStream atEnd or: [ (next := inputStream next) = aCharacter ] ] whileFalse: [ s nextPut: next ] ]
+]
+
 { #category : 'initialization' }
 Forth >> parseNextToken [
 
+	| next |
 	inputStream skipSeparators.
 	^ String streamContents: [ :s |
-		  [ inputStream atEnd or: [ inputStream peek isSeparator ] ] whileFalse: [ s nextPut: inputStream next ] ]
+		  [ inputStream atEnd or: [ (next := inputStream next) isSeparator ] ] whileFalse: [ s nextPut: next ] ]
 ]
 
 { #category : 'accessing' }

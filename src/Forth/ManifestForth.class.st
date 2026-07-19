@@ -45,6 +45,13 @@ ManifestForth class >> ruleSuperSendsNewRuleV1FalsePositive [
 ]
 
 { #category : 'code-critics' }
+ManifestForth class >> ruleTempsReadBeforeWrittenRuleV1FalsePositive [
+
+	<ignoreForCoverage>
+	^ #(#(#(#RGMethodDefinition #(#Forth #parseNextToken #false)) #'2026-07-19T11:31:44.697954-04:00') #(#(#RGMethodDefinition #(#Forth #parseInputUntil: #false)) #'2026-07-19T11:32:00.150442-04:00') )
+]
+
+{ #category : 'code-critics' }
 ManifestForth class >> ruleUnaryAccessingMethodWithoutReturnRuleV1FalsePositive [
 
 	<ignoreForCoverage>

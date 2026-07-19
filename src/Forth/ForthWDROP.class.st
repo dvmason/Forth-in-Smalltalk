@@ -10,7 +10,7 @@ Class {
 }
 
 { #category : 'accessing' }
-ForthWDROP >> executeOn: _ [
+ForthWDROP >> executeOn: interpreter [
 
-	dataStack removeFirst
+	dataStack addFirst: interpreter nextWord
 ]

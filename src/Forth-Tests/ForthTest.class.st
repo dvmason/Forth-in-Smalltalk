@@ -10,10 +10,12 @@ Class {
 ForthTest >> testComments [
 
 	self assert: '6 ( a comment mixed \ more comment) 7 *' asForth top equals: 42.
-	self assert: '6 \ a comment
+	self assert: '6 ( a comment mixed ( not nested) 7 *' asForth top equals: 42.
+	self
+		assert: '6 \ a comment
 	 7 \ ( comment ) \ more
-	* ( comment ) \ comment' asForth top equals: 42.
-
+	* ( comment ) \ comment' asForth top
+		equals: 42
 ]
 
 { #category : 'tests' }
@@ -93,7 +95,15 @@ ForthTest >> testIF [
 	self assert: (foo at: 11) equals: 42.
 	self assert: (foo at: 12) equals: (f lookup: #EXIT).
 	self assert: ': foo 2 < IF 3 ELSE 42 THEN ; 3 foo' asForth top equals: 42.
-	self assert: ': foo 2 < IF 3 ELSE 1 IF 42 ELSE 17 THEN THEN ; 3 foo' asForth top equals: 42
+	self assert: ': foo 2 < IF 3 ELSE 1 IF 42 ELSE 17 THEN THEN ; 3 foo' asForth top equals: 42.
+	f := ': IS-IT-ZERO? ( n -- )
+    0 = IF 
+        ." Yes, it is zero." 
+    ELSE 
+        ." No, it is not." 
+    THEN ;' asForth.
+	self assert: (String streamContents: [: s | f evaluate: '0 IS-IT-ZERO?' on: s]) equals: 'Yes, it is zero.'.
+	self assert: (String streamContents: [: s | f evaluate: '1 IS-IT-ZERO?' on: s]) equals: 'No, it is not.'
 ]
 
 { #category : 'tests' }

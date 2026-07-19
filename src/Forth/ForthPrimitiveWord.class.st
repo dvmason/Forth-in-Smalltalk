@@ -14,3 +14,9 @@ ForthPrimitiveWord class >> newImmediate [
 
 	^ self new setImmediate
 ]
+
+{ #category : 'initialization' }
+ForthPrimitiveWord >> isImmediate [
+
+	^ false
+]

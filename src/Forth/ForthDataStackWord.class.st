@@ -27,9 +27,3 @@ ForthDataStackWord >> dataStack: aCollection [
 
 	dataStack := aCollection
 ]
-
-{ #category : 'initialization' }
-ForthDataStackWord >> isImmediate [
-
-	^ false
-]
